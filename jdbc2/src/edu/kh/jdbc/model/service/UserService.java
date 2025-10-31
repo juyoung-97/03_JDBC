@@ -6,6 +6,7 @@ import java.util.List;
 import edu.kh.jdbc.common.JDBCTemplate;
 import edu.kh.jdbc.model.dao.UserDAO;
 import edu.kh.jdbc.model.dto.User;
+import oracle.sql.converter.JdbcCharacterConverters;
 
 // (Model 중 하나) Service : 비즈니스 로직을 처리하는 계층,
 // 데이터를 가공하고 트랜잭션(commit, rollback) 관리 수행
@@ -115,20 +116,89 @@ public class UserService {
 		return result;
 	}
 
-	/** 6. 조회 하는 메서드
-	 * @param user
+	/** 6-1 . ID, PW 가 일치하는 회원이 있는지 조회(SELECT)
+	 * @param userId
+	 * @param userPw
 	 * @return
 	 */
-	public int updateName(User user) throws Exception{
+	public int selectUserNo(String userId, String userPw) throws Exception {
 		
 		Connection conn = JDBCTemplate.getConnection();
 		
-		int result = dao.updateName(conn, user);
-			
+		int userNo = dao.selectUser(conn, userId, userPw);
+		
+		JDBCTemplate.close(conn);
 		
 		
-		return 0;
+		return userNo;
 	}
+
+	/** 6-2 . ID, PW 가 일치하는 회원이 있는지 조회(SELECT) 후 이름 수정(UPDATE)
+	 * @param name
+	 * @param userNo
+	 * @return
+	 * @throws Exception
+	 */
+	public int updateName(String name, int userNo) throws Exception{
+		
+		Connection conn = JDBCTemplate.getConnection();
+		
+		int result = dao.updateName(conn, name, userNo);
+		
+		if(result > 0)  JDBCTemplate.commit(conn);
+		else			JDBCTemplate.rollback(conn);
+		
+		JDBCTemplate.close(conn);
+		
+		return result;
+	}
+
+	/** 7. ID 중복 확인 서비스
+	 * @param userId
+	 * @return
+	 * @throws Exception
+	 */
+	public int idCheck(String userId) throws Exception{
+		
+		Connection conn = JDBCTemplate.getConnection();
+		
+		int count = dao.idCheck(conn, userId);
+		
+		JDBCTemplate.close(conn);
+		
+				
+		return count;
+	}
+
+	/** userList 에 있는 모든 User 객체를 INSERT 서비스
+	 * @param userList
+	 * @return
+	 */
+	public int multiInsertUser(List<User> userList) throws Exception {
+		
+		// 다중 INSERT 방법
+		// 1) SQL 을 이용한 다중 INSERT
+		// 2) Java 반복문을 이용한 다중 INSERT ( 이거 사용함 )
+		
+		Connection conn = JDBCTemplate.getConnection();
+		
+		int count = 0; // 삽입 성공한 행의 갯수 count
+		for(User user : userList) {
+			int result = dao.insertUser(conn, user);
+			count += result; // 삽입 성공한 행의 갯수 count 누적
+		}
+		
+		// 전체 삽입 성공시 commit / 아니면 rollback (일부삽입 , 전체 실패)
+		if(count == userList.size()) JDBCTemplate.commit(conn);
+		else 						 JDBCTemplate.rollback(conn);
+		
+		JDBCTemplate.close(conn);
+		
+		
+		return count;
+	}
+
+
 
 
 	

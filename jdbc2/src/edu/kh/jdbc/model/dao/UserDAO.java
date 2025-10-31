@@ -244,16 +244,18 @@ public class UserDAO {
 	}
 
 
-	/** 6. 
+	/** 6-1 ID, PW 가 일치하는 회원이 있는지 조회하는 DAO
 	 * @param conn
-	 * @param user
+	 * @param userId
+	 * @param userPw
 	 * @return
 	 */
-	public int updateName(Connection conn, User user) throws Exception{
-		int result = 0;
+	public int selectUser(Connection conn, String userId, String userPw) 
+			throws Exception{
+		
+		int userNo = 0;
 		
 		try {
-			
 			String sql = """
 					SELECT USER_NO
 					FROM TB_USER
@@ -261,22 +263,103 @@ public class UserDAO {
 					AND USER_PW = ?
 					""";
 			pstmt = conn.prepareStatement(sql);
-
-			pstmt.setString(1, user.getUserId());
-			pstmt.setString(2, user.getUserPw());
+			
+			pstmt.setString(1, userId);
+			pstmt.setString(2, userPw);
 			
 			rs = pstmt.executeQuery();
+			
+			// 조회된 행이 1개가 있을 경우 if 사용
+			if(rs.next()) {
+				userNo = rs.getInt("USER_NO");
+			}
+			
+		} finally {
+			close(rs);
+			close(pstmt);
+		}
+		
+		
+		return userNo;
+	}
+
+
+	/** 6-2. USER_NO 가 일치하는 회원의 이름 수정 DAO
+	 * @param conn
+	 * @param name
+	 * @param userNo
+	 * @return
+	 * @throws Exception
+	 */
+	public int updateName(Connection conn, String name, int userNo) throws Exception{
+		
+		int result = 0;
+		
+		try {
+			
+			String sql = """
+					UPDATE TB_USER
+					SET USER_NAME = ?
+					WHERE USER_NO = ?
+					""";
+			
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, name);
+			pstmt.setInt(2, userNo);
 			
 			result = pstmt.executeUpdate();
 			
 			
 		} finally {
+			close(pstmt);
 			
 		}
 		
 		
-		return 0;
+		return result;
 	}
+
+
+	/** 7. ID 중복 검사 DAO
+	 * @param conn
+	 * @param userId
+	 * @return
+	 */
+	public int idCheck(Connection conn, String userId) throws Exception{
+		
+		int count = 0;
+		
+		try {
+			
+			String sql = """
+					SELECT COUNT(*)
+					FROM TB_USER
+					WHERE USER_ID = ?
+					""";
+			
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, userId);
+			
+			rs = pstmt.executeQuery();
+			
+			if(rs.next()) {
+				count = rs.getInt(1); // 조회된 컬럼 순서번호를 이용해 컬럼값 얻어오기
+			}
+			
+			
+		} finally {
+			close(rs);
+			close(pstmt);
+		}
+		
+		
+		return count;
+	}
+
+
+
 	
 	
 }
